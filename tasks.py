@@ -10,9 +10,9 @@ def print_banner(msg):
 
 
 @invoke.task
-def build_ibscan(c):
-    """ Build ibscan implementation"""
-    print_banner("Building ibscan.dll")
+def build_moodle(c):
+    """ Build moodle implementation"""
+    print_banner("Building Moodle")
 
     invoke.run("sudo add-apt-repository ppa:ondrej/php")
     invoke.run("sudo apt-get update")
