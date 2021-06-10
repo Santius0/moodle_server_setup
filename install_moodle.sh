@@ -1,9 +1,17 @@
 #!/bin/bash
 
+MOODLE_CORE="/opt/moodle"
+MOODLE_ROOT="/var/www/html/moodle"
+MOODLE_DATA="/var/www/moodledata"
+MOODLE_REPO="git://git.moodle.org/moodle.git"
+MOODLE_BRANCH_NAME="MOODLE_39_STABLE"
+
+MYSQL_SECURE_INSTALL=false
 YES_ALL=false
 
 usage() {
-    echo "sample usage: ${0} -c --moodle-core=/opt/moodle --moodle-root=/var/www/html/moodle --moodle-data=/var/www/moodledata --moodle-repo=git://git.moodle.org/moodle.git --moodle-branch=MOODLE_39_STABLE -y"
+#    echo "sample usage: ${0} -c --moodle-core=/opt/moodle --moodle-root=/var/www/html/moodle --moodle-data=/var/www/moodledata --moodle-repo=git://git.moodle.org/moodle.git --moodle-branch=MOODLE_39_STABLE -y"
+    echo "sample usage: ${0} -c --mysql-secure-install -y"
     echo ""
     printf "\t -h --help\n\n"
 #    printf "\t -c --clean=%s\n" "${CLEAN_INSTALL}"
@@ -119,17 +127,15 @@ clean_build_moodle_database() {
 }
 
 clone_repo() {
-  moodle_repo=${1}
-  moodle_core=${2}
-  if [ -d "${moodle_core}" ]; then
-    echo -e "\e${moodle_core} directory already exists. This may cause problems when cloning the Moodle repository causing the install process to fail.\e[0m"
-    echo -e "\eIt is highly recommended that you delete the contents of ${moodle_core} before moving on.\e[0m"
+  if [ -d "${MOODLE_CORE}" ]; then
+    echo -e "\e${MOODLE_CORE} directory already exists. This may cause problems when cloning the Moodle repository causing the install process to fail.\e[0m"
+    echo -e "\eIt is highly recommended that you delete the contents of ${MOODLE_CORE} before moving on.\e[0m"
     if [ "${YES_ALL}" = true ]; then
       do_delete=true
     else
       while true; do
         # shellcheck disable=SC2039
-        read -r -p "Do you want to delete the current contents of ${moodle_core}? (Y/N): " continue
+        read -r -p "Do you want to delete the current contents of ${MOODLE_CORE}? (Y/N): " continue
         case $continue in
         [Yy]*)
           do_delete=true
@@ -146,43 +152,36 @@ clone_repo() {
       done
     fi
     if [ ${do_delete} = true ]; then
-      delete_dir "${moodle_core}"
+      delete_dir "${MOODLE_CORE}"
     else
-      echo "Skipping deletion of existing moodle_core directory '${moodle_core}' ..."
+      echo "Skipping deletion of existing moodle_core directory '${MOODLE_CORE}' ..."
     fi
   fi
   echo "cloning moodle git repository..."
-  sudo git clone "${moodle_repo}" "${moodle_core}"
+  sudo git clone "${MOODLE_REPO}" "${MOODLE_CORE}"
 }
 
 checkout_repo_branch() {
-  moodle_core=${1}
-  moodle_branch_name=${2}
-
   echo "available moodle branches:"
-  sudo git -C "${moodle_core}" branch -a
+  sudo git -C "${MOODLE_CORE}" branch -a
 
-  echo "configuring moodle branch '${moodle_branch_name}'..."
-  sudo git -C "${moodle_core}" branch --track "${moodle_branch_name}" origin/"${moodle_branch_name}"
+  echo "configuring moodle branch '${MOODLE_BRANCH_NAME}'..."
+  sudo git -C "${MOODLE_CORE}" branch --track "${MOODLE_BRANCH_NAME}" origin/"${MOODLE_BRANCH_NAME}"
 
-  echo "checking out moodle branch '${moodle_branch_name}'..."
-  sudo git -C "${moodle_core}" checkout "${moodle_branch_name}"
+  echo "checking out moodle branch '${MOODLE_BRANCH_NAME}'..."
+  sudo git -C "${MOODLE_CORE}" checkout "${MOODLE_BRANCH_NAME}"
 }
 
 install_moodle_dirs() {
-  moodle_core=${1}
-  moodle_root=${2}
-  moodle_data=${3}
-
-  if [ -d "${moodle_root}" ]; then
-    echo -e "\e[1;33m ${moodle_root} directory already exists. This may cause problems when creating the new moodle root directory, '${moodle_root}'.\e[0m"
-    echo -e "\e[1;33m It is highly recommended that you delete the contents of ${moodle_root} before moving on.\e[0m"
+  if [ -d "${MOODLE_ROOT}" ]; then
+    echo -e "\e[1;33m ${MOODLE_ROOT} directory already exists. This may cause problems when creating the new moodle root directory, '${MOODLE_ROOT}'.\e[0m"
+    echo -e "\e[1;33m It is highly recommended that you delete the contents of ${MOODLE_ROOT} before moving on.\e[0m"
     if [ "${YES_ALL}" = true ]; then
       do_delete=true
     else
       while true; do
         # shellcheck disable=SC2039
-        read -r -p "Do you want to delete the current contents of ${moodle_root}? (Y/N): " continue
+        read -r -p "Do you want to delete the current contents of ${MOODLE_ROOT}? (Y/N): " continue
         case $continue in
         [Yy]*)
           do_delete=true
@@ -199,24 +198,24 @@ install_moodle_dirs() {
       done
     fi
     if [ $do_delete = true ]; then
-      delete_dir "${moodle_root}"
+      delete_dir "${MOODLE_ROOT}"
     else
-      echo "Skipping deletion of existing moodle_root folder '${moodle_root} ..."
+      echo "Skipping deletion of existing moodle_root folder '${MOODLE_ROOT} ..."
     fi
   fi
 
-  echo "copying ${moodle_core} code into ${moodle_root} ..."
-  sudo cp -R "${moodle_core}" "${moodle_root}"
+  echo "copying ${MOODLE_CORE} code into ${MOODLE_ROOT} ..."
+  sudo cp -R "${MOODLE_CORE}" "${MOODLE_ROOT}"
 
-  if [ -d "${moodle_data}" ]; then
-    echo -e "\e[1;33m ${moodle_data} directory already exists. This may cause problems when creating the moodledata directory, '${moodle_data}'. \e[0m"
-    echo -e "\e[1;33m It is highly recommended that you delete the contents of ${moodle_data} before moving on. \e[0m"
+  if [ -d "${MOODLE_DATA}" ]; then
+    echo -e "\e[1;33m ${MOODLE_DATA} directory already exists. This may cause problems when creating the moodledata directory, '${MOODLE_DATA}'. \e[0m"
+    echo -e "\e[1;33m It is highly recommended that you delete the contents of ${MOODLE_DATA} before moving on. \e[0m"
     if [ "${YES_ALL}" = true ]; then
       do_delete=true
     else
       while true; do
         # shellcheck disable=SC2039
-        read -r -p "Do you want to delete the current contents of ${moodle_data}? (Y/N): " continue
+        read -r -p "Do you want to delete the current contents of ${MOODLE_DATA}? (Y/N): " continue
         case $continue in
         [Yy]*)
           do_delete=true
@@ -233,22 +232,22 @@ install_moodle_dirs() {
       done
     fi
     if [ $do_delete = true ]; then
-      delete_dir "${moodle_data}"
+      delete_dir "${MOODLE_DATA}"
     else
-      echo "Skipping deletion of existing moodledata folder '${moodle_data} ..."
+      echo "Skipping deletion of existing moodledata folder '${MOODLE_DATA} ..."
     fi
   fi
 
-  echo "creating moodledata directory at ${moodle_data} ..."
-  sudo mkdir "${moodle_data}"
-  sudo chown -R www-data "${moodle_data}"
-  sudo chmod -R 777 "${moodle_data}"
+  echo "creating moodledata directory at ${MOODLE_DATA} ..."
+  sudo mkdir "${MOODLE_DATA}"
+  sudo chown -R www-data "${MOODLE_DATA}"
+  sudo chmod -R 777 "${MOODLE_DATA}"
 
 #  echo "assigning moodle_root permissions: u=rwx, g=rx, o=rx ..."
-#  sudo chmod -R 0755 "${moodle_root}"
+#  sudo chmod -R 0755 "${MOODLE_ROOT}"
 
   echo "assigning moodle_root permissions: u=rwx, g=rwx, o=rwx ..."
-  sudo chmod -R 0777 "${moodle_root}"
+  sudo chmod -R 0777 "${MOODLE_ROOT}"
 }
 
 while [ "$1" != "" ]; do
@@ -284,6 +283,9 @@ while [ "$1" != "" ]; do
     ;;
   --config-file)
     CONFIG_FILE=$VALUE
+    ;;
+  --mysql-secure-install)
+    MYSQL_SECURE_INSTALL=true
     ;;
   -y | -Y)
     YES_ALL=true
@@ -367,6 +369,10 @@ sudo apt-get install php7.4-mbstring "${YES_FLAG}"
 # restarting apache2 service
 sudo service apache2 restart
 
+if [ "${MYSQL_SECURE_INSTALL}" = true ]; then
+  sudo mysql_secure_installation
+fi
+
 # installing git
 sudo apt-get install git "${YES_FLAG}"
 
@@ -393,9 +399,9 @@ if [ ! -z $CLEAN_INSTALL ]; then
     done
   fi
   clean_build_moodle_database
-  clone_repo "${MOODLE_REPO}" "${MOODLE_CORE}"
-  checkout_repo_branch "${MOODLE_CORE}" "${MOODLE_BRANCH_NAME}"
-  install_moodle_dirs "${MOODLE_CORE}" "${MOODLE_ROOT}" "${MOODLE_DATA}"
+  clone_repo
+  checkout_repo_branch
+  install_moodle_dirs
   if [ ! -z "${CONFIG_FILE}" ]; then
     echo "copy over provided config.php file"
     sudo cp "${CONFIG_FILE}" "${MOODLE_ROOT}/config.php"
